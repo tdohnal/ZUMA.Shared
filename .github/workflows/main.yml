@@ -1,0 +1,29 @@
+name: Publish Shared Kernel to GitHub Packages
+
+on:
+  push:
+    branches: [ main ] 
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write 
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '10.0.x'
+          source-url: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pack
+        run: dotnet pack ZUMA.SharedKernel/ZUMA.SharedKernel.csproj --configuration Release
+
+      - name: Push to GitHub Feed
+        run: dotnet nuget push ZUMA.SharedKernel/bin/Release/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --skip-duplicate
