@@ -2,28 +2,35 @@ name: Publish Shared Kernel to GitHub Packages
 
 on:
   push:
-    branches: [ master ] 
+    branches: [ master ] # Pokud máš větev master, nech master. Pokud main, dej main.
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write 
+      packages: write # Toto dává akci právo nahrát balíček do tvého feedu
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4 # Vždy používej nejnovější verzi checkoutu
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+          # Tato URL říká dotnetu, kam má balíček poslat
           source-url: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Tady je ten trik: GITHUB_TOKEN je tam "sám od sebe", 
+          # jen ho musíme pojmenovat NUGET_AUTH_TOKEN, aby ho dotnet viděl.
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Restore dependencies
+        run: dotnet restore ZUMA.SharedKernel/ZUMA.SharedKernel.csproj
 
       - name: Pack
         run: dotnet pack ZUMA.SharedKernel/ZUMA.SharedKernel.csproj --configuration Release
 
       - name: Push to GitHub Feed
-        run: dotnet nuget push ZUMA.SharedKernel/bin/Release/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --skip-duplicate
+        # dotnet si sám vytáhne NUGET_AUTH_TOKEN z prostředí, které jsme nastavili v Setup .NET
+        run: dotnet nuget push ZUMA.SharedKernel/bin/Release/*.nupkg --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --skip-duplicate
