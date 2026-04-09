@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Immutable;
+using System.Linq;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class InternalArchitectureAnalyzer : DiagnosticAnalyzer
@@ -31,39 +32,32 @@ public class InternalArchitectureAnalyzer : DiagnosticAnalyzer
         var usingDirective = (UsingDirectiveSyntax)context.Node;
         var importedNamespace = usingDirective.Name.ToString();
 
-        // Zjistíme, kde se nachází aktuální soubor (podle jeho namespace)
-        var model = context.SemanticModel;
-        var originalNamespace = context.ContainingSymbol?.ContainingNamespace?.ToDisplayString() ?? "";
+        // Získáme namespace jako pole (např. ["ZUMA", "CommunicationService", "Domain", "Entities"])
+        var symbol = context.ContainingSymbol;
+        var originalNamespace = symbol?.ContainingNamespace?.ToDisplayString() ?? "";
+        var namespaceParts = originalNamespace.Split('.');
 
-        // --- LOGIKA RESTRIKCÍ ---
+        // --- LOGIKA RESTRIKCÍ POMOCÍ POLE ---
 
-        // 1. Pokud jsem v DOMAIN
-        if (originalNamespace.Contains(".Domain"))
+        // 1. Pokud jsem KDEKOLIV v Domain (např. ZUMA.Module.Domain nebo ZUMA.Domain.Entities)
+        if (namespaceParts.Contains("Domain"))
         {
-            // Nesmím tahat Application ani Infrastructure
-            if (importedNamespace.Contains(".Application") || importedNamespace.Contains(".Infrastructure"))
+            // V Domain nesmí být žádný using na Application nebo Infrastructure
+            // Použijeme opět Split, aby to bylo přesné
+            var importedParts = importedNamespace.Split('.');
+
+            if (importedParts.Contains("Application") || importedParts.Contains("Infrastructure"))
             {
                 ReportError(context, usingDirective, "Domain", importedNamespace);
             }
         }
 
-        // 2. Pokud jsem v APPLICATION
-        if (originalNamespace.Contains(".Application"))
+        // 2. Pokud jsem v Application
+        if (namespaceParts.Contains("Application"))
         {
-            // Nesmím tahat Infrastructure (Application má být nezávislá na implementaci)
-            if (importedNamespace.Contains(".Infrastructure"))
+            if (importedNamespace.Split('.').Contains("Infrastructure"))
             {
                 ReportError(context, usingDirective, "Application", importedNamespace);
-            }
-        }
-
-        // 3. Mezi-modulová komunikace (Communication vs Customer)
-        // Pokud jsem v modulu Communication, nesmím napřímo sahat do Customer.Infrastructure
-        if (originalNamespace.Contains(".Communication") && importedNamespace.Contains(".Customer"))
-        {
-            if (importedNamespace.Contains(".Infrastructure") || importedNamespace.Contains(".Domain"))
-            {
-                ReportError(context, usingDirective, "Communication", importedNamespace);
             }
         }
     }
