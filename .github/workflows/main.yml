@@ -1,8 +1,8 @@
-name: Publish Shared Kernel to GitHub Packages
+name: Publish Shared Kernel and Analyzer to GitHub Packages
 
 on:
   push:
-    branches: [ master ] # Ujisti se, že tvoje větev je master
+    branches: [ master ]
 
 jobs:
   publish:
@@ -17,33 +17,38 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '10.0.x' # .NET 10 pro Shared Kernel a build
           source-url: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
         env:
           NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Restore
-        run: dotnet restore ZUMA.SharedKernel/ZUMA.SharedKernel.csproj
-             dotnet restore ZUMA.ArchitectureAnalyzer/ZUMA.ArchitectureAnalyzer.csproj
-
       - name: Generate Version String
         id: version_gen
         run: |
-          # Získáme datum ve formátu RRRR.MM.DD
           DATE=$(date +'%Y.%m.%d')
-          # Získáme číslo buildu v rámci dnešního dne (github.run_number je globální, to stačí)
-          # Nebo použijeme jen run_number pro jednoduchost:
           VERSION="${DATE}.${{ github.run_number }}"
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build
+      # --- SHARED KERNEL (.NET 10) ---
+      - name: Restore Shared Kernel
+        run: dotnet restore ZUMA.SharedKernel/ZUMA.SharedKernel.csproj
+
+      - name: Build Shared Kernel
         run: dotnet build ZUMA.SharedKernel/ZUMA.SharedKernel.csproj --configuration Release --no-restore /p:Version=${{ steps.version_gen.outputs.VERSION }}
-             dotnet build ZUMA.ArchitectureAnalyzer/ZUMA.ArchitectureAnalyzer.csproj --configuration Release --no-restore /p:Version=${{ steps.version_gen.outputs.VERSION }}
 
-      - name: Pack
+      - name: Pack Shared Kernel
         run: dotnet pack ZUMA.SharedKernel/ZUMA.SharedKernel.csproj --configuration Release --no-build --output ./dist /p:Version=${{ steps.version_gen.outputs.VERSION }}
-             dotnet pack ZUMA.ArchitectureAnalyzer/ZUMA.ArchitectureAnalyzer.csproj --configuration Release --no-build --output ./dist /p:Version=${{ steps.version_gen.outputs.VERSION }}
 
-      # KROK 3: Odeslání do GitHub Feedu
+      # --- ARCHITECTURE ANALYZER (netstandard2.0) ---
+      - name: Restore Analyzer
+        run: dotnet restore ZUMA.ArchitectureAnalyzer/ZUMA.ArchitectureAnalyzer.csproj
+
+      - name: Build Analyzer
+        run: dotnet build ZUMA.ArchitectureAnalyzer/ZUMA.ArchitectureAnalyzer.csproj --configuration Release --no-restore /p:Version=${{ steps.version_gen.outputs.VERSION }}
+
+      - name: Pack Analyzer
+        run: dotnet pack ZUMA.ArchitectureAnalyzer/ZUMA.ArchitectureAnalyzer.csproj --configuration Release --no-build --output ./dist /p:Version=${{ steps.version_gen.outputs.VERSION }}
+
+      # --- PUSH VŠEHO ---
       - name: Push to GitHub Feed
-        run: dotnet nuget push ./dist/*.nupkg --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --skip-duplicate
+        run: dotnet nuget push "./dist/*.nupkg" --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
