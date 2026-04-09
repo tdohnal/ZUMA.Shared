@@ -24,6 +24,7 @@ jobs:
 
       - name: Restore
         run: dotnet restore ZUMA.SharedKernel/ZUMA.SharedKernel.csproj
+             dotnet restore ZUMA.ArchitectureAnalyzer/ZUMA.ArchitectureAnalyzer.csproj
 
       - name: Generate Version String
         id: version_gen
@@ -37,9 +38,11 @@ jobs:
 
       - name: Build
         run: dotnet build ZUMA.SharedKernel/ZUMA.SharedKernel.csproj --configuration Release --no-restore /p:Version=${{ steps.version_gen.outputs.VERSION }}
+             dotnet build ZUMA.ArchitectureAnalyzer/ZUMA.ArchitectureAnalyzer.csproj --configuration Release --no-restore /p:Version=${{ steps.version_gen.outputs.VERSION }}
 
       - name: Pack
         run: dotnet pack ZUMA.SharedKernel/ZUMA.SharedKernel.csproj --configuration Release --no-build --output ./dist /p:Version=${{ steps.version_gen.outputs.VERSION }}
+             dotnet pack ZUMA.ArchitectureAnalyzer/ZUMA.ArchitectureAnalyzer.csproj --configuration Release --no-build --output ./dist /p:Version=${{ steps.version_gen.outputs.VERSION }}
 
       # KROK 3: Odeslání do GitHub Feedu
       - name: Push to GitHub Feed
