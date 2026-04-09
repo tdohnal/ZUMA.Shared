@@ -9,88 +9,51 @@ using System.Linq;
 public class InternalArchitectureAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "ZUMA002";
-    public const string InfoId = "ZUMA_INFO";
 
-    // Hlavní pravidlo pro chybu
     private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
         DiagnosticId,
-        "Porušení Clean Architecture",
-        "Vrstva '{0}' nesmí používat typ z '{1}' (Zdroj: {2})",
+        "ZUMA ARCHITEKTURA",
+        "Chyba: Vrstva '{0}' nesmí používat '{1}'",
         "Architecture",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    // Pomocné pravidlo pro potvrzení, že analyzátor běží
-    private static readonly DiagnosticDescriptor InfoRule = new DiagnosticDescriptor(
-        InfoId,
-        "ZUMA Analyzer Status",
-        "Analyzátor běží nad souborem v namespace: {0}",
-        "Debug",
-        DiagnosticSeverity.Info,
-        isEnabledByDefault: true);
-
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule, InfoRule);
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
     public override void Initialize(AnalysisContext context)
     {
-        // Důležité: Analyzujeme i generovaný kód, abychom měli jistotu, že uvidíme výsledky všude
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-
         context.RegisterSemanticModelAction(AnalyzeModel);
     }
 
     private void AnalyzeModel(SemanticModelAnalysisContext context)
     {
-        var model = context.SemanticModel;
         var root = context.SemanticModel.SyntaxTree.GetRoot();
+        var firstNamespace = root.DescendantNodes().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault();
 
-        // 1. Zjistíme namespace aktuálního souboru
-        var firstDeclaration = root.DescendantNodes().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault();
-        string currentNamespace = firstDeclaration?.Name.ToString() ?? "Global/Unknown";
+        if (firstNamespace == null) return;
 
-        // --- LOG PRO POTVRZENÍ BĚHU ---
-        // Vyhodíme informaci na začátku souboru
-        context.ReportDiagnostic(Diagnostic.Create(InfoRule, firstDeclaration?.GetLocation() ?? root.GetLocation(), currentNamespace));
+        string currentNamespace = firstNamespace.Name.ToString();
 
-        if (string.IsNullOrEmpty(currentNamespace) || currentNamespace == "Global/Unknown") return;
+        // --- TOTÁLNÍ TEST ---
+        // Tohle MUSÍ vyhodit chybu v každém souboru, co má namespace.
+        // Pokud to neuvidíš, analyzátor se vůbec nespustil.
+        context.ReportDiagnostic(Diagnostic.Create(Rule, firstNamespace.Name.GetLocation(), "TEST", "BĚŽÍM", currentNamespace));
 
-        var currentParts = currentNamespace.Split('.');
-
-        // 2. Projdeme všechny identifikátory typů v souboru
+        // --- REÁLNÁ LOGIKA ---
         var typeNodes = root.DescendantNodes().OfType<IdentifierNameSyntax>();
-
         foreach (var node in typeNodes)
         {
-            var symbol = model.GetSymbolInfo(node).Symbol;
+            var symbol = context.SemanticModel.GetSymbolInfo(node).Symbol;
             if (symbol == null) continue;
 
-            // Získáme namespace toho typu, na který se díváme
-            string targetNamespace = symbol.ContainingNamespace?.ToDisplayString() ?? "";
-            var targetParts = targetNamespace.Split('.');
+            string targetNs = symbol.ContainingNamespace?.ToDisplayString() ?? "";
 
-            // --- LOGIKA ARCHITEKTURY ---
-
-            // Pokud jsem v DOMAIN
-            if (currentParts.Contains("Domain"))
+            // Domain -> Infrastructure
+            if (currentNamespace.Contains("Domain") && targetNs.Contains("Infrastructure"))
             {
-                // Nesmím používat nic z Infrastructure nebo Application
-                if (targetParts.Contains("Infrastructure") || targetParts.Contains("Application"))
-                {
-                    var diagnostic = Diagnostic.Create(Rule, node.GetLocation(), "Domain", targetNamespace, currentNamespace);
-                    context.ReportDiagnostic(diagnostic);
-                }
-            }
-
-            // Pokud jsem v APPLICATION
-            if (currentParts.Contains("Application"))
-            {
-                // Nesmím do Infrastructure
-                if (targetParts.Contains("Infrastructure"))
-                {
-                    var diagnostic = Diagnostic.Create(Rule, node.GetLocation(), "Application", targetNamespace, currentNamespace);
-                    context.ReportDiagnostic(diagnostic);
-                }
+                context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(), "Domain", targetNs, currentNamespace));
             }
         }
     }
