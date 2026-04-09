@@ -30,51 +30,43 @@ public class InternalArchitectureAnalyzer : DiagnosticAnalyzer
     private void AnalyzeModel(SemanticModelAnalysisContext context)
     {
         var root = context.SemanticModel.SyntaxTree.GetRoot();
-
-        // Získáme namespace aktuálního souboru
         var namespaceDecl = root.DescendantNodes().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault();
         if (namespaceDecl == null) return;
 
         string currentNamespace = namespaceDecl.Name.ToString();
-        var currentParts = currentNamespace.Split('.');
 
-        // Projdeme všechny identifikátory (typy, vlastnosti, atd.)
+        // LOG 1: Žiju a vidím namespace souboru
+        context.ReportDiagnostic(Diagnostic.Create(Rule, namespaceDecl.Name.GetLocation(), "DEBUG-START", "Namespace souboru", currentNamespace));
+
         var nodes = root.DescendantNodes().OfType<IdentifierNameSyntax>();
 
         foreach (var node in nodes)
         {
+            // Nechceme logovat úplně všechno (vynecháme primitivní typy jako string, long atd.)
+            string nodeText = node.Identifier.Text;
+            if (new[] { "string", "long", "Guid", "DateTime", "int", "bool" }.Contains(nodeText)) continue;
+
             var symbol = context.SemanticModel.GetSymbolInfo(node).Symbol;
-            if (symbol == null) continue;
 
-            // Získáme namespace typu, na který uzel odkazuje
-            string targetNamespace = symbol.ContainingNamespace?.ToDisplayString() ?? "";
-            var targetParts = targetNamespace.Split('.');
-
-            // --- LOGIKA ZÁVISLOSTÍ ---
-
-            // 1. Jsem v DOMAIN (Nesmí nikam ven)
-            if (currentParts.Contains("Domain"))
+            if (symbol == null)
             {
-                if (targetParts.Contains("Application") || targetParts.Contains("Infrastructure") || targetParts.Contains("API"))
-                {
-                    // Výjimka: Povolit System, Microsoft a SharedKernel namespaces
-                    if (!targetNamespace.StartsWith("System") && !targetNamespace.StartsWith("Microsoft") && !targetNamespace.Contains("SharedKernel"))
-                    {
-                        context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(), "Domain", targetNamespace, currentNamespace));
-                    }
-                }
+                // LOG 2: Našel jsem slovo, ale nevím, co to je za typ (Chybějící reference?)
+                context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(), "DEBUG-NULL", nodeText, "Symbol nebyl nalezen"));
+                continue;
             }
 
-            // 2. Jsem v APPLICATION (Smí jen do Domain)
-            if (currentParts.Contains("Application"))
+            string targetNamespace = symbol.ContainingNamespace?.ToDisplayString() ?? "Global";
+
+            // LOG 3: Tohle uvidíš u CommunicationDbContext - zjistíme, co v tom targetNamespace reálně je
+            context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(), "DEBUG-CHECK", nodeText, targetNamespace));
+
+            // --- PŮVODNÍ LOGIKA (zatím nechaná, ale logy mají přednost) ---
+            var currentParts = currentNamespace.Split('.');
+            var targetParts = targetNamespace.Split('.');
+
+            if (currentParts.Contains("Domain") && (targetParts.Contains("Infrastructure") || targetParts.Contains("Application")))
             {
-                if (targetParts.Contains("Infrastructure") || targetParts.Contains("API"))
-                {
-                    if (!targetNamespace.StartsWith("System") && !targetNamespace.StartsWith("Microsoft") && !targetNamespace.Contains("SharedKernel"))
-                    {
-                        context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(), "Application", targetNamespace, currentNamespace));
-                    }
-                }
+                context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(), "REAL-ERROR", targetNamespace, currentNamespace));
             }
         }
     }
