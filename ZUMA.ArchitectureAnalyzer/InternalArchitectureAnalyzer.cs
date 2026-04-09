@@ -12,8 +12,8 @@ public class InternalArchitectureAnalyzer : DiagnosticAnalyzer
 
     private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
         DiagnosticId,
-        "ZUMA ARCHITEKTURA",
-        "Chyba: Vrstva '{0}' nesmí používat '{1}'",
+        "Porušení Clean Architecture",
+        "Vrstva '{0}' nesmí používat typ z '{1}' (Aktuální namespace: {2})",
         "Architecture",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -30,30 +30,51 @@ public class InternalArchitectureAnalyzer : DiagnosticAnalyzer
     private void AnalyzeModel(SemanticModelAnalysisContext context)
     {
         var root = context.SemanticModel.SyntaxTree.GetRoot();
-        var firstNamespace = root.DescendantNodes().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault();
 
-        if (firstNamespace == null) return;
+        // Získáme namespace aktuálního souboru
+        var namespaceDecl = root.DescendantNodes().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault();
+        if (namespaceDecl == null) return;
 
-        string currentNamespace = firstNamespace.Name.ToString();
+        string currentNamespace = namespaceDecl.Name.ToString();
+        var currentParts = currentNamespace.Split('.');
 
-        // --- TOTÁLNÍ TEST ---
-        // Tohle MUSÍ vyhodit chybu v každém souboru, co má namespace.
-        // Pokud to neuvidíš, analyzátor se vůbec nespustil.
-        context.ReportDiagnostic(Diagnostic.Create(Rule, firstNamespace.Name.GetLocation(), "TEST", "BĚŽÍM", currentNamespace));
+        // Projdeme všechny identifikátory (typy, vlastnosti, atd.)
+        var nodes = root.DescendantNodes().OfType<IdentifierNameSyntax>();
 
-        // --- REÁLNÁ LOGIKA ---
-        var typeNodes = root.DescendantNodes().OfType<IdentifierNameSyntax>();
-        foreach (var node in typeNodes)
+        foreach (var node in nodes)
         {
             var symbol = context.SemanticModel.GetSymbolInfo(node).Symbol;
             if (symbol == null) continue;
 
-            string targetNs = symbol.ContainingNamespace?.ToDisplayString() ?? "";
+            // Získáme namespace typu, na který uzel odkazuje
+            string targetNamespace = symbol.ContainingNamespace?.ToDisplayString() ?? "";
+            var targetParts = targetNamespace.Split('.');
 
-            // Domain -> Infrastructure
-            if (currentNamespace.Contains("Domain") && targetNs.Contains("Infrastructure"))
+            // --- LOGIKA ZÁVISLOSTÍ ---
+
+            // 1. Jsem v DOMAIN (Nesmí nikam ven)
+            if (currentParts.Contains("Domain"))
             {
-                context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(), "Domain", targetNs, currentNamespace));
+                if (targetParts.Contains("Application") || targetParts.Contains("Infrastructure") || targetParts.Contains("API"))
+                {
+                    // Výjimka: Povolit System, Microsoft a SharedKernel namespaces
+                    if (!targetNamespace.StartsWith("System") && !targetNamespace.StartsWith("Microsoft") && !targetNamespace.Contains("SharedKernel"))
+                    {
+                        context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(), "Domain", targetNamespace, currentNamespace));
+                    }
+                }
+            }
+
+            // 2. Jsem v APPLICATION (Smí jen do Domain)
+            if (currentParts.Contains("Application"))
+            {
+                if (targetParts.Contains("Infrastructure") || targetParts.Contains("API"))
+                {
+                    if (!targetNamespace.StartsWith("System") && !targetNamespace.StartsWith("Microsoft") && !targetNamespace.Contains("SharedKernel"))
+                    {
+                        context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(), "Application", targetNamespace, currentNamespace));
+                    }
+                }
             }
         }
     }
