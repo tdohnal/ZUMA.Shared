@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="ZUMA.ArchitectureAnalyzer/ZUMA.ArchitectureAnalyzer.csproj" Id="e3d4c36b-ecc7-4072-8443-0cc4bb1e86d9" />
   <Project Path="ZUMA.SharedKernel/ZUMA.SharedKernel.csproj" />
 </Solution>

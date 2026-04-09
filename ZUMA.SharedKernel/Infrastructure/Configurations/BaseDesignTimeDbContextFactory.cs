@@ -2,8 +2,6 @@
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 
-namespace ZUMA.Communication.Infrastructure.Persistence;
-
 public abstract class BaseDesignTimeDbContextFactory<T> : IDesignTimeDbContextFactory<T>
     where T : DbContext
 {
@@ -11,51 +9,53 @@ public abstract class BaseDesignTimeDbContextFactory<T> : IDesignTimeDbContextFa
 
     public T CreateDbContext(string[] args)
     {
-        string basePath = Directory.GetCurrentDirectory();
-
-        // 2. Kontrola, zda appsettings.json existuje. Pokud ne, hledáme v Service projektu.
-        if (!File.Exists(Path.Combine(basePath, "appsettings.json")))
+        // 1. Najdeme Root (ZUMA.API), kde leží .sln
+        var currentDir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        var rootDir = currentDir;
+        while (rootDir != null && !rootDir.GetFiles("*.sln").Any())
         {
-            var projectDirectory = new DirectoryInfo(basePath);
-
-            // Trik: Pokud jsme v "ZUMA.Communication.Infrastructure", 
-            // zkusíme najít "ZUMA.CommunicationService" v nadřazené složce.
-            var serviceDirName = projectDirectory.Name.Replace(".Infrastructure", "Service");
-            var potentialServicePath = Path.Combine(projectDirectory.Parent!.FullName, serviceDirName);
-
-            if (File.Exists(Path.Combine(potentialServicePath, "appsettings.json")))
-            {
-                basePath = potentialServicePath;
-            }
+            rootDir = rootDir.Parent;
         }
 
-        Console.WriteLine($"[EF Tools] loading configuration from: {basePath}");
+        if (rootDir == null)
+            throw new Exception("Chyba: Soubor .sln nebyl nalezen. Jsi v repozitáři ZUMA.API?");
 
-        // 3. Sestavení konfigurace
-        IConfigurationRoot configuration = new ConfigurationBuilder()
+        // 2. Teď najdeme ten správný Service projekt. 
+        // Trik: Hledáme složku, která začíná stejně jako náš projekt, ale končí na "Service"
+        // Např. z "ZUMA.Customer.Infrastructure" uděláme "ZUMA.CustomerService"
+        string currentProjectName = typeof(T).Name.Replace("DbContext", "Service");
+        // Pokud se tvůj projekt jmenuje jinak, klidně to jméno sem napiš natvrdo:
+        // string targetProject = "ZUMA.CustomerService"; 
+
+        var allSettingsFiles = rootDir.GetFiles("appsettings.json", SearchOption.AllDirectories);
+
+        // Najdeme ten, který je v té správné složce (např. .../Services/Customer/ZUMA.CustomerService/)
+        var settingsFile = allSettingsFiles.FirstOrDefault(f =>
+            f.DirectoryName!.Contains("Services") &&
+            f.DirectoryName.EndsWith(currentProjectName)
+        );
+
+        if (settingsFile == null)
+        {
+            // Failback: Pokud to nenajde podle jména, vezmi první appsettings, co vypadá jako Service
+            settingsFile = allSettingsFiles.FirstOrDefault(f => f.DirectoryName!.EndsWith("Service"));
+        }
+
+        if (settingsFile == null)
+            throw new Exception($"[EF Tools] ERROR: appsettings.json nebyl nalezen pro projekt {currentProjectName}");
+
+        string basePath = settingsFile.DirectoryName!;
+        Console.WriteLine($"[EF Tools] SUCCESS: Konfigurace načtena z: {basePath}");
+
+        // 3. Sestavení konfigurace a DbContextu (zbytek znáš)
+        var configuration = new ConfigurationBuilder()
             .SetBasePath(basePath)
             .AddJsonFile("appsettings.json", optional: false)
-            .AddJsonFile("appsettings.Development.json", optional: true)
             .Build();
 
-        var connectionString = configuration.GetConnectionString(ConnectionStringName);
-
-        if (string.IsNullOrEmpty(connectionString))
-        {
-            throw new InvalidOperationException(
-                $"ERROR: ConnectionString '{ConnectionStringName}' not found at {Path.Combine(basePath, "appsettings.json")}");
-        }
-
-        // 4. Fix pro Docker vs Localhost (pokud v appsettings máš název kontejneru)
-        var localConnectionString = connectionString.Contains("zuma-db")
-            ? connectionString.Replace("zuma-db", "localhost")
-            : connectionString;
-
-        // 5. Konfigurace DbContextu
         var optionsBuilder = new DbContextOptionsBuilder<T>();
-        optionsBuilder.UseNpgsql(localConnectionString);
+        optionsBuilder.UseNpgsql(configuration.GetConnectionString(ConnectionStringName));
 
-        // 6. Vytvoření instance (předpokládá se konstruktor s DbContextOptions)
         return (T)Activator.CreateInstance(typeof(T), optionsBuilder.Options)!;
     }
 }
