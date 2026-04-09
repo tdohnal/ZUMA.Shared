@@ -9,81 +9,89 @@ using System.Linq;
 public class InternalArchitectureAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "ZUMA002";
+    public const string InfoId = "ZUMA_INFO";
 
+    // Hlavní pravidlo pro chybu
     private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
         DiagnosticId,
         "Porušení Clean Architecture",
-        "Vrstva '{0}' nesmí záviset na '{1}' (Aktuální namespace: {2})",
+        "Vrstva '{0}' nesmí používat typ z '{1}' (Zdroj: {2})",
         "Architecture",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+    // Pomocné pravidlo pro potvrzení, že analyzátor běží
+    private static readonly DiagnosticDescriptor InfoRule = new DiagnosticDescriptor(
+        InfoId,
+        "ZUMA Analyzer Status",
+        "Analyzátor běží nad souborem v namespace: {0}",
+        "Debug",
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule, InfoRule);
 
     public override void Initialize(AnalysisContext context)
     {
+        // Důležité: Analyzujeme i generovaný kód, abychom měli jistotu, že uvidíme výsledky všude
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSyntaxNodeAction(AnalyzeUsing, SyntaxKind.UsingDirective);
+
+        context.RegisterSemanticModelAction(AnalyzeModel);
     }
 
-    private void AnalyzeUsing(SyntaxNodeAnalysisContext context)
+    private void AnalyzeModel(SemanticModelAnalysisContext context)
     {
-        var usingDirective = (UsingDirectiveSyntax)context.Node;
-        var importedNamespace = usingDirective.Name.ToString().Trim();
+        var model = context.SemanticModel;
+        var root = context.SemanticModel.SyntaxTree.GetRoot();
 
-        // Zjistíme namespace aktuálního souboru
-        var namespaceDeclaration = usingDirective.Ancestors()
-            .OfType<BaseNamespaceDeclarationSyntax>()
-            .FirstOrDefault();
+        // 1. Zjistíme namespace aktuálního souboru
+        var firstDeclaration = root.DescendantNodes().OfType<BaseNamespaceDeclarationSyntax>().FirstOrDefault();
+        string currentNamespace = firstDeclaration?.Name.ToString() ?? "Global/Unknown";
 
-        string currentNamespace = namespaceDeclaration?.Name.ToString() ?? "";
+        // --- LOG PRO POTVRZENÍ BĚHU ---
+        // Vyhodíme informaci na začátku souboru
+        context.ReportDiagnostic(Diagnostic.Create(InfoRule, firstDeclaration?.GetLocation() ?? root.GetLocation(), currentNamespace));
 
-        if (string.IsNullOrEmpty(currentNamespace))
-        {
-            var symbol = context.SemanticModel.GetEnclosingSymbol(usingDirective.SpanStart);
-            currentNamespace = symbol?.ContainingNamespace?.ToDisplayString() ?? "";
-        }
+        if (string.IsNullOrEmpty(currentNamespace) || currentNamespace == "Global/Unknown") return;
 
         var currentParts = currentNamespace.Split('.');
-        var importedParts = importedNamespace.Split('.');
 
-        // --- UNIVERZÁLNÍ ARCHITEKTONICKÁ POLICIE ---
+        // 2. Projdeme všechny identifikátory typů v souboru
+        var typeNodes = root.DescendantNodes().OfType<IdentifierNameSyntax>();
 
-        // 1. Pravidlo: DOMAIN je střed vesmíru. Nesmí znát nic "venkovního".
-        if (currentParts.Contains("Domain"))
+        foreach (var node in typeNodes)
         {
-            if (importedParts.Contains("Application") || importedParts.Contains("Infrastructure") || importedParts.Contains("API"))
+            var symbol = model.GetSymbolInfo(node).Symbol;
+            if (symbol == null) continue;
+
+            // Získáme namespace toho typu, na který se díváme
+            string targetNamespace = symbol.ContainingNamespace?.ToDisplayString() ?? "";
+            var targetParts = targetNamespace.Split('.');
+
+            // --- LOGIKA ARCHITEKTURY ---
+
+            // Pokud jsem v DOMAIN
+            if (currentParts.Contains("Domain"))
             {
-                ReportError(context, usingDirective, "Domain", importedNamespace, currentNamespace);
-                return;
+                // Nesmím používat nic z Infrastructure nebo Application
+                if (targetParts.Contains("Infrastructure") || targetParts.Contains("Application"))
+                {
+                    var diagnostic = Diagnostic.Create(Rule, node.GetLocation(), "Domain", targetNamespace, currentNamespace);
+                    context.ReportDiagnostic(diagnostic);
+                }
+            }
+
+            // Pokud jsem v APPLICATION
+            if (currentParts.Contains("Application"))
+            {
+                // Nesmím do Infrastructure
+                if (targetParts.Contains("Infrastructure"))
+                {
+                    var diagnostic = Diagnostic.Create(Rule, node.GetLocation(), "Application", targetNamespace, currentNamespace);
+                    context.ReportDiagnostic(diagnostic);
+                }
             }
         }
-
-        // 2. Pravidlo: APPLICATION smí jen do Domain. Nesmí do Infrastructure ani API.
-        if (currentParts.Contains("Application"))
-        {
-            if (importedParts.Contains("Infrastructure") || importedParts.Contains("API"))
-            {
-                ReportError(context, usingDirective, "Application", importedNamespace, currentNamespace);
-                return;
-            }
-        }
-
-        // 3. Pravidlo: INFRASTRUCTURE smí do Domain a Application, ale nesmí do API (kruhová závislost).
-        if (currentParts.Contains("Infrastructure"))
-        {
-            if (importedParts.Contains("API"))
-            {
-                ReportError(context, usingDirective, "Infrastructure", importedNamespace, currentNamespace);
-                return;
-            }
-        }
-    }
-
-    private void ReportError(SyntaxNodeAnalysisContext context, UsingDirectiveSyntax node, string layer, string imported, string currentNs)
-    {
-        var diagnostic = Diagnostic.Create(Rule, node.GetLocation(), layer, imported, currentNs);
-        context.ReportDiagnostic(diagnostic);
     }
 }
