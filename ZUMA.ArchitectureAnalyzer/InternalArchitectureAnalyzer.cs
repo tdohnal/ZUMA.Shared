@@ -9,11 +9,12 @@ using System.Linq;
 public class InternalArchitectureAnalyzer : DiagnosticAnalyzer
 {
     public const string DiagnosticId = "ZUMA002";
+
     private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
         DiagnosticId,
-        "Porušení Clean Architecture (Internal)",
-        "Složka '{0}' nesmí záviset na '{1}' (Namespace: {2})",
-        "Design",
+        "Porušení Clean Architecture",
+        "Vrstva '{0}' nesmí záviset na '{1}' (Aktuální namespace: {2})",
+        "Architecture",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
@@ -23,7 +24,6 @@ public class InternalArchitectureAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        // Sledujeme usingy v každém souboru
         context.RegisterSyntaxNodeAction(AnalyzeUsing, SyntaxKind.UsingDirective);
     }
 
@@ -32,50 +32,58 @@ public class InternalArchitectureAnalyzer : DiagnosticAnalyzer
         var usingDirective = (UsingDirectiveSyntax)context.Node;
         var importedNamespace = usingDirective.Name.ToString().Trim();
 
-        // Takhle vytáhneme namespace spolehlivěji přímo z místa, kde je ten using
-        var semanticModel = context.SemanticModel;
-        var enclosingNamespace = semanticModel.GetEnclosingNamespace(usingDirective.SpanStart);
-        var originalNamespace = enclosingNamespace?.ToDisplayString() ?? "";
+        // Zjistíme namespace aktuálního souboru
+        var namespaceDeclaration = usingDirective.Ancestors()
+            .OfType<BaseNamespaceDeclarationSyntax>()
+            .FirstOrDefault();
 
-        // Pro debugování (pokud by to pořád nešlo, tohle ti v Error Listu ukáže, co analyzátor vidí)
-        // context.ReportDiagnostic(Diagnostic.Create(Rule, usingDirective.GetLocation(), "DEBUG", importedNamespace, originalNamespace));
+        string currentNamespace = namespaceDeclaration?.Name.ToString() ?? "";
 
-        // Použijeme tvůj nápad s detekcí klíčových slov v namespace
-        bool isInDomain = originalNamespace.Split('.').Contains("Domain");
-        bool isInApplication = originalNamespace.Split('.').Contains("Application");
-        bool isInCommunication = originalNamespace.Split('.').Contains("Communication");
-
-        // 1. Restrikce pro DOMAIN
-        if (isInDomain)
+        if (string.IsNullOrEmpty(currentNamespace))
         {
-            if (importedNamespace.Contains(".Application") || importedNamespace.Contains(".Infrastructure"))
+            var symbol = context.SemanticModel.GetEnclosingSymbol(usingDirective.SpanStart);
+            currentNamespace = symbol?.ContainingNamespace?.ToDisplayString() ?? "";
+        }
+
+        var currentParts = currentNamespace.Split('.');
+        var importedParts = importedNamespace.Split('.');
+
+        // --- UNIVERZÁLNÍ ARCHITEKTONICKÁ POLICIE ---
+
+        // 1. Pravidlo: DOMAIN je střed vesmíru. Nesmí znát nic "venkovního".
+        if (currentParts.Contains("Domain"))
+        {
+            if (importedParts.Contains("Application") || importedParts.Contains("Infrastructure") || importedParts.Contains("API"))
             {
-                ReportError(context, usingDirective, "Domain", importedNamespace, originalNamespace);
+                ReportError(context, usingDirective, "Domain", importedNamespace, currentNamespace);
+                return;
             }
         }
 
-        // 2. Restrikce pro APPLICATION
-        if (isInApplication)
+        // 2. Pravidlo: APPLICATION smí jen do Domain. Nesmí do Infrastructure ani API.
+        if (currentParts.Contains("Application"))
         {
-            if (importedNamespace.Contains(".Infrastructure"))
+            if (importedParts.Contains("Infrastructure") || importedParts.Contains("API"))
             {
-                ReportError(context, usingDirective, "Application", importedNamespace, originalNamespace);
+                ReportError(context, usingDirective, "Application", importedNamespace, currentNamespace);
+                return;
             }
         }
 
-        // 3. Mezi-modulová komunikace
-        if (isInCommunication && importedNamespace.Contains(".CustomerService"))
+        // 3. Pravidlo: INFRASTRUCTURE smí do Domain a Application, ale nesmí do API (kruhová závislost).
+        if (currentParts.Contains("Infrastructure"))
         {
-            if (importedNamespace.Contains(".Infrastructure") || importedNamespace.Contains(".Domain"))
+            if (importedParts.Contains("API"))
             {
-                ReportError(context, usingDirective, "Communication", importedNamespace, originalNamespace);
+                ReportError(context, usingDirective, "Infrastructure", importedNamespace, currentNamespace);
+                return;
             }
         }
     }
 
-    private void ReportError(SyntaxNodeAnalysisContext context, UsingDirectiveSyntax node, string layer, string imported)
+    private void ReportError(SyntaxNodeAnalysisContext context, UsingDirectiveSyntax node, string layer, string imported, string currentNs)
     {
-        var diagnostic = Diagnostic.Create(Rule, node.GetLocation(), layer, imported, imported);
+        var diagnostic = Diagnostic.Create(Rule, node.GetLocation(), layer, imported, currentNs);
         context.ReportDiagnostic(diagnostic);
     }
 }
