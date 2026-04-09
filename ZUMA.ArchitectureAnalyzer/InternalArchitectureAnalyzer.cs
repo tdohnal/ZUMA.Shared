@@ -34,40 +34,58 @@ public class InternalArchitectureAnalyzer : DiagnosticAnalyzer
         if (namespaceDecl == null) return;
 
         string currentNamespace = namespaceDecl.Name.ToString();
-
-        // LOG 1: Žiju a vidím namespace souboru
-        context.ReportDiagnostic(Diagnostic.Create(Rule, namespaceDecl.Name.GetLocation(), "DEBUG-START", "Namespace souboru", currentNamespace));
+        var currentParts = currentNamespace.Split('.');
 
         var nodes = root.DescendantNodes().OfType<IdentifierNameSyntax>();
 
         foreach (var node in nodes)
         {
-            // Nechceme logovat úplně všechno (vynecháme primitivní typy jako string, long atd.)
-            string nodeText = node.Identifier.Text;
-            if (new[] { "string", "long", "Guid", "DateTime", "int", "bool" }.Contains(nodeText)) continue;
+            string identifierText = node.Identifier.Text;
+            if (new[] { "string", "long", "Guid", "DateTime", "int", "bool", "var" }.Contains(identifierText)) continue;
 
             var symbol = context.SemanticModel.GetSymbolInfo(node).Symbol;
+            string targetNamespace = symbol?.ContainingNamespace?.ToDisplayString() ?? "";
 
-            if (symbol == null)
+            // --- TESTOVACÍ KRITÉRIA ---
+
+            bool isViolation = false;
+            string targetName = targetNamespace;
+
+            // Pokud jsme v DOMAIN
+            if (currentParts.Contains("Domain"))
             {
-                // LOG 2: Našel jsem slovo, ale nevím, co to je za typ (Chybějící reference?)
-                context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(), "DEBUG-NULL", nodeText, "Symbol nebyl nalezen"));
-                continue;
+                // A) Podle symbolu (přesné)
+                if (targetNamespace.Contains("Infrastructure") || targetNamespace.Contains("Application"))
+                {
+                    isViolation = true;
+                }
+                // B) Podle textu (pokud symbol selže - např. natvrdo napsaný DbContext)
+                else if (identifierText.Contains("DbContext") || identifierText.Contains("Repository"))
+                {
+                    isViolation = true;
+                    targetName = "Podezřelý text: " + identifierText;
+                }
             }
 
-            string targetNamespace = symbol.ContainingNamespace?.ToDisplayString() ?? "Global";
-
-            // LOG 3: Tohle uvidíš u CommunicationDbContext - zjistíme, co v tom targetNamespace reálně je
-            context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(), "DEBUG-CHECK", nodeText, targetNamespace));
-
-            // --- PŮVODNÍ LOGIKA (zatím nechaná, ale logy mají přednost) ---
-            var currentParts = currentNamespace.Split('.');
-            var targetParts = targetNamespace.Split('.');
-
-            if (currentParts.Contains("Domain") && (targetParts.Contains("Infrastructure") || targetParts.Contains("Application")))
+            // Pokud jsme v APPLICATION
+            if (currentParts.Contains("Application"))
             {
-                context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(), "REAL-ERROR", targetNamespace, currentNamespace));
+                if (targetNamespace.Contains("Infrastructure") || identifierText.Contains("DbContext"))
+                {
+                    isViolation = true;
+                    targetName = string.IsNullOrEmpty(targetNamespace) ? "Infrastructure (odhad)" : targetNamespace;
+                }
+            }
+
+            if (isViolation)
+            {
+                // Tady hlásíme skutečnou chybu
+                context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(),
+                    currentNamespace.Split('.').Last(), // Vrstva (např. Domain)
+                    targetName,                        // Co porušil
+                    currentNamespace));                // Celý náš namespace
             }
         }
+
     }
 }
