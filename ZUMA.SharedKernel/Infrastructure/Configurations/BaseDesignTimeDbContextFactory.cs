@@ -51,6 +51,7 @@ public abstract class BaseDesignTimeDbContextFactory<T> : IDesignTimeDbContextFa
         var configuration = new ConfigurationBuilder()
             .SetBasePath(basePath)
             .AddJsonFile("appsettings.json", optional: false)
+            .AddEnvironmentVariables()
             .Build();
 
         var optionsBuilder = new DbContextOptionsBuilder<T>();
