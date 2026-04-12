@@ -43,10 +43,6 @@ public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IA
         return items.AsReadOnly();
     }
 
-    /// <summary>
-    /// Virtuální metoda pro konfiguraci Include. 
-    /// V základu neprovádí žádné Joiny.
-    /// </summary>
     protected virtual IQueryable<T> ApplyIncludes(IQueryable<T> query)
     {
         return query;
