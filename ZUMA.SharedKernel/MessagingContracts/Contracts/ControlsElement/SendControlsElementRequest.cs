@@ -65,6 +65,8 @@ public record SendCreateControlsElementRequest : IRequestEvent
 {
     public required string Title { get; set; }
 
+    public required Guid OwnerUserPublicId { get; set; }
+
     public required ListType ListType { get; set; }
 
     public List<ControlsElementsItemModel> Items { get; set; } = new();
