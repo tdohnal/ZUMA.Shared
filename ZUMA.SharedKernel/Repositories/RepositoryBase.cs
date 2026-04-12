@@ -43,22 +43,31 @@ public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IA
         return items.AsReadOnly();
     }
 
+    /// <summary>
+    /// Virtuální metoda pro konfiguraci Include. 
+    /// V základu neprovádí žádné Joiny.
+    /// </summary>
+    protected virtual IQueryable<T> ApplyIncludes(IQueryable<T> query)
+    {
+        return query;
+    }
+
     public virtual async Task<T?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Getting entity of type {EntityType} with ID {EntityId}", typeof(T).Name, id);
-        return await _dbSet.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+        return await ApplyIncludes(_dbSet).SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
     public virtual async Task<T?> GetByPublicIdAsync(Guid publicId, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Getting entity of type {EntityType} with ID {EntityId}", typeof(T).Name, publicId);
-        return await _dbSet.SingleOrDefaultAsync(x => x.PublicId == publicId, cancellationToken);
+        return await ApplyIncludes(_dbSet).SingleOrDefaultAsync(x => x.PublicId == publicId, cancellationToken);
     }
 
     public virtual async Task<IList<T>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Getting all entities of type {EntityType}", typeof(T).Name);
-        return await _dbSet.Where(x => !x.Deleted.HasValue).ToListAsync(cancellationToken);
+        return await ApplyIncludes(_dbSet).Where(x => !x.Deleted.HasValue).ToListAsync(cancellationToken);
     }
 
     public virtual async Task<T?> CreateAsync(T entity, CancellationToken cancellationToken = default)
