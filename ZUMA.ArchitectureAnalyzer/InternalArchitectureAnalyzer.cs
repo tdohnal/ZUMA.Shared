@@ -82,8 +82,8 @@ public class InternalArchitectureAnalyzer : DiagnosticAnalyzer
                 // Tady hlásíme skutečnou chybu
                 context.ReportDiagnostic(Diagnostic.Create(Rule, node.GetLocation(),
                     currentNamespace.Split('.').Last(), // Vrstva (např. Domain)
-                    targetName,                        // Co porušil
-                    currentNamespace));                // Celý náš namespace
+                    targetName,                         // Co porušil
+                    currentNamespace));                 // Celý náš namespace
             }
         }
 
