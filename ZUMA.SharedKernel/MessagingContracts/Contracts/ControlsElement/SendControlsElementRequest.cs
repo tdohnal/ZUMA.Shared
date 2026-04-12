@@ -63,9 +63,12 @@ public class ControlsElementsItemModel
 #region Create ControlsElement
 public record SendCreateControlsElementRequest : IRequestEvent
 {
-    public string ControlsElementname { get; set; }
-    public string FullName { get; set; }
-    public string Email { get; set; }
+    public required string Title { get; set; }
+
+    public required ListType ListType { get; set; }
+
+    public List<ControlsElementsItemModel> Items { get; set; } = new();
+    public ElementsPermission ElementsPermission { get; set; } = new();
 }
 public record SendCreateControlsElementSuccess : ISuccessResponse
 {
