@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace ZUMA.SharedKernel.Configuration;
+namespace ZUMA.SharedKernel.Configurration;
 
 public static class DIContainer
 {

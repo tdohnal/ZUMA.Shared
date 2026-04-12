@@ -38,4 +38,8 @@
 		<PackageReference Include="Riok.Mapperly" Version="4.1.1" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Domain\ValueObjects\Communication\" />
+	</ItemGroup>
+
 </Project>

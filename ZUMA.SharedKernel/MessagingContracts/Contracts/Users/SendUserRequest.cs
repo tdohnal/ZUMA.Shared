@@ -1,6 +1,6 @@
-﻿using ZUMA.SharedKernel.Messagges.Base;
+﻿using ZUMA.SharedKernel.MessagingContracts.Base;
 
-namespace ZUMA.SharedKernel.Messagges.Contracts.Users;
+namespace ZUMA.SharedKernel.MessagingContracts.Contracts.Users;
 
 
 #region Get User By ID

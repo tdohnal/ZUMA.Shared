@@ -1,4 +1,4 @@
-﻿namespace ZUMA.SharedKernel.Messagges;
+﻿namespace ZUMA.SharedKernel.MessagingContracts;
 
 public class SuccessResponseBase
 {

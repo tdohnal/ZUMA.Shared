@@ -1,4 +1,4 @@
-﻿namespace ZUMA.SharedKernel.Messagges.Base;
+﻿namespace ZUMA.SharedKernel.MessagingContracts.Base;
 
 public interface ISuccessResponse
 {

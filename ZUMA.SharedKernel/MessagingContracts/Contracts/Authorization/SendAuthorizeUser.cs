@@ -1,6 +1,6 @@
-﻿using ZUMA.SharedKernel.Messagges.Base;
+﻿using ZUMA.SharedKernel.MessagingContracts.Base;
 
-namespace ZUMA.SharedKernel.Messagges.Contracts.Authorization;
+namespace ZUMA.SharedKernel.MessagingContracts.Contracts.Authorization;
 
 public class SendAuthorizeUserRequest : IRequestEvent
 {
