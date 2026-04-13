@@ -44,7 +44,7 @@ public class ControlsElementMessageModel
     public required ListType ListType { get; set; }
 
     public List<ControlsElementsItemModel> Items { get; set; } = new();
-    public List<ElementsPermission> ElementsPermission { get; set; } = new();
+    public ElementsPermission ElementsPermission { get; set; } = new();
 }
 
 public class ControlsElementsItemModel
