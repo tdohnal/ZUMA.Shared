@@ -66,34 +66,165 @@ public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IA
         return await ApplyIncludes(_dbSet).Where(x => !x.Deleted.HasValue).ToListAsync(cancellationToken);
     }
 
-    public virtual async Task<T?> CreateAsync(T entity, CancellationToken cancellationToken = default)
+    public async Task<T?> CreateAsync(T entity, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Creating a new entity of type {EntityType}", typeof(T).Name);
+
+        var now = DateTime.UtcNow;
+
+        entity.Created = now;
+
+        var navigations = _dbContext.Entry(entity).Collections;
+        foreach (var navigation in navigations)
+        {
+            if (navigation.CurrentValue != null)
+            {
+                foreach (var child in navigation.CurrentValue)
+                {
+                    if (child is IAuditableEntities auditableChild)
+                    {
+                        auditableChild.Created = now;
+                    }
+                }
+            }
+        }
+
         await _dbSet.AddAsync(entity, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await SaveChangesAsync(entity, cancellationToken);
         return entity;
     }
 
-    public virtual async Task<T?> UpdateAsync(T entity, CancellationToken cancellationToken = default)
+    public async Task<T?> UpdateAsync(T entity, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Updating entity of type {EntityType} with ID {EntityId}", typeof(T).Name, entity.Id);
+
+        var now = DateTime.UtcNow;
+
+        entity.Updated = now;
+
+        var navigations = _dbContext.Entry(entity).Collections;
+        foreach (var navigation in navigations)
+        {
+            if (navigation.CurrentValue != null)
+            {
+                foreach (var child in navigation.CurrentValue)
+                {
+                    if (child is IAuditableEntities auditableChild)
+                    {
+                        auditableChild.Updated = now;
+                    }
+                }
+            }
+        }
+
         _dbSet.Attach(entity);
         _dbContext.Entry(entity).State = EntityState.Modified;
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await SaveChangesAsync(entity, cancellationToken);
         return entity;
     }
 
-    public virtual async Task<bool> DeleteAsync(long id, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteAsync(long id, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Deleting entity of type {EntityType} with ID {EntityId}", typeof(T).Name, id);
         var entity = await GetByIdAsync(id, cancellationToken);
         if (entity == null) return false;
 
-        entity.Deleted = DateTime.UtcNow;
         _dbSet.Attach(entity);
+        _dbContext.Entry(entity).State = EntityState.Deleted;
         _dbContext.Entry(entity).Property(x => x.Deleted).IsModified = true;
 
-        var affected = await _dbContext.SaveChangesAsync(cancellationToken);
+        var affected = await SaveChangesAsync(entity, cancellationToken);
         return affected > 0;
+    }
+
+    /// <summary>
+    /// Vlastní implementace SaveChanges, která automaticky řeší auditní pole.
+    /// </summary>
+    protected async Task<int> SaveChangesAsync(T entity, CancellationToken cancellationToken = default)
+    {
+        var entries = _dbContext.ChangeTracker.Entries<IAuditableEntities>();
+        var now = DateTime.UtcNow;
+
+        foreach (var entry in entries)
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    {
+                        entry.Entity.Created = now;
+                        if (entry.Entity.PublicId == Guid.Empty)
+                            entry.Entity.PublicId = Guid.CreateVersion7();
+
+                        var navigations = _dbContext.Entry(entity).Collections;
+                        foreach (var navigation in navigations)
+                        {
+                            if (navigation.CurrentValue != null)
+                            {
+                                foreach (var child in navigation.CurrentValue)
+                                {
+                                    if (child is IAuditableEntities auditableChild)
+                                    {
+                                        auditableChild.Created = now;
+                                    }
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+
+                case EntityState.Modified:
+                    {
+                        entry.State = EntityState.Modified;
+                        entity.Deleted = now;
+                        entity.Updated = now;
+                        var navigations = _dbContext.Entry(entity).Collections;
+                        foreach (var navigation in navigations)
+                        {
+                            if (navigation.CurrentValue != null)
+                            {
+                                foreach (var child in navigation.CurrentValue)
+                                {
+                                    if (child is IAuditableEntities auditableChild)
+                                    {
+                                        auditableChild.Updated = now;
+                                    }
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+
+
+
+                case EntityState.Deleted:
+                    {
+                        entry.State = EntityState.Modified;
+                        entity.Deleted = now;
+                        entity.Updated = now;
+                        var navigations = _dbContext.Entry(entity).Collections;
+                        foreach (var navigation in navigations)
+                        {
+                            if (navigation.CurrentValue != null)
+                            {
+                                foreach (var child in navigation.CurrentValue)
+                                {
+                                    if (child is IAuditableEntities auditableChild)
+                                    {
+                                        auditableChild.Deleted = now;
+                                        auditableChild.Updated = now;
+                                    }
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+
+            }
+        }
+
+        return await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }
