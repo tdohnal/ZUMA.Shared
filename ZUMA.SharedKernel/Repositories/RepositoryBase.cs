@@ -57,7 +57,7 @@ public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IA
     public virtual async Task<T?> GetByPublicIdAsync(Guid publicId, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Getting entity of type {EntityType} with ID {EntityId}", typeof(T).Name, publicId);
-        return await ApplyIncludes(_dbSet).SingleOrDefaultAsync(x => x.PublicId == publicId, cancellationToken);
+        return await ApplyIncludes(_dbSet).SingleOrDefaultAsync(x => x.PublicId == publicId && !x.Deleted.HasValue, cancellationToken);
     }
 
     public virtual async Task<IList<T>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -135,7 +135,6 @@ public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IA
                 case EntityState.Modified:
                     {
                         entry.State = EntityState.Modified;
-                        entity.Deleted = now;
                         entity.Updated = now;
                         var navigations = _dbContext.Entry(entity).Collections;
                         foreach (var navigation in navigations)
