@@ -69,26 +69,6 @@ public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IA
     public async Task<T?> CreateAsync(T entity, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Creating a new entity of type {EntityType}", typeof(T).Name);
-
-        var now = DateTime.UtcNow;
-
-        entity.Created = now;
-
-        var navigations = _dbContext.Entry(entity).Collections;
-        foreach (var navigation in navigations)
-        {
-            if (navigation.CurrentValue != null)
-            {
-                foreach (var child in navigation.CurrentValue)
-                {
-                    if (child is IAuditableEntities auditableChild)
-                    {
-                        auditableChild.Created = now;
-                    }
-                }
-            }
-        }
-
         await _dbSet.AddAsync(entity, cancellationToken);
         await SaveChangesAsync(entity, cancellationToken);
         return entity;
@@ -97,26 +77,6 @@ public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IA
     public async Task<T?> UpdateAsync(T entity, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Updating entity of type {EntityType} with ID {EntityId}", typeof(T).Name, entity.Id);
-
-        var now = DateTime.UtcNow;
-
-        entity.Updated = now;
-
-        var navigations = _dbContext.Entry(entity).Collections;
-        foreach (var navigation in navigations)
-        {
-            if (navigation.CurrentValue != null)
-            {
-                foreach (var child in navigation.CurrentValue)
-                {
-                    if (child is IAuditableEntities auditableChild)
-                    {
-                        auditableChild.Updated = now;
-                    }
-                }
-            }
-        }
-
         _dbSet.Attach(entity);
         _dbContext.Entry(entity).State = EntityState.Modified;
         await SaveChangesAsync(entity, cancellationToken);
@@ -172,7 +132,6 @@ public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IA
 
                         break;
                     }
-
                 case EntityState.Modified:
                     {
                         entry.State = EntityState.Modified;
@@ -195,9 +154,6 @@ public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IA
 
                         break;
                     }
-
-
-
                 case EntityState.Deleted:
                     {
                         entry.State = EntityState.Modified;
