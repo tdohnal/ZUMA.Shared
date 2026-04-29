@@ -1,5 +1,5 @@
 ﻿using ZUMA.SharedKernel.Domain.Enums;
-using ZUMA.SharedKernel.Domain.MessagingContracts.Base;
+using ZUMA.SharedKernel.Domain.Interfaces;
 using ZUMA.SharedKernel.Domain.ValueObjects.Customer.ControlsElement;
 
 namespace ZUMA.SharedKernel.Domain.MessagingContracts.Contracts.ControlsElement;

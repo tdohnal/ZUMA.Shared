@@ -1,4 +1,4 @@
-﻿using ZUMA.SharedKernel.Domain.MessagingContracts.Base;
+﻿using ZUMA.SharedKernel.Domain.Interfaces;
 
 public interface IMessageService
 {

@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
-using ZUMA.SharedKernel.Domain.Entities;
+using ZUMA.SharedKernel.Domain.Interfaces;
 
 namespace ZUMA.SharedKernel.Infrastructure.Repositories;
 

@@ -1,7 +1,6 @@
 ﻿using System.Linq.Expressions;
-using ZUMA.SharedKernel.Domain.Entities;
 
-namespace ZUMA.SharedKernel.Application.Services;
+namespace ZUMA.SharedKernel.Domain.Interfaces;
 
 public interface IServiceBase<T> where T : IAuditableEntities
 {

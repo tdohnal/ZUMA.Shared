@@ -1,6 +1,5 @@
 ﻿using System.Linq.Expressions;
-using ZUMA.SharedKernel.Domain.Entities;
-using ZUMA.SharedKernel.Infrastructure.Repositories;
+using ZUMA.SharedKernel.Domain.Interfaces;
 
 namespace ZUMA.SharedKernel.Application.Services;
 

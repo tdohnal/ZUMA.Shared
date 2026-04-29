@@ -1,5 +1,5 @@
 ﻿using MassTransit;
-using ZUMA.SharedKernel.Domain.MessagingContracts.Base;
+using ZUMA.SharedKernel.Domain.Interfaces;
 
 public class MessageService : IMessageService
 {

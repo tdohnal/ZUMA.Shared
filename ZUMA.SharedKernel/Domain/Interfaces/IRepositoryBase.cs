@@ -1,7 +1,6 @@
 ﻿using System.Linq.Expressions;
-using ZUMA.SharedKernel.Domain.Entities;
 
-namespace ZUMA.SharedKernel.Infrastructure.Repositories;
+namespace ZUMA.SharedKernel.Domain.Interfaces;
 
 public interface IRepositoryBase<T> where T : IAuditableEntities
 {

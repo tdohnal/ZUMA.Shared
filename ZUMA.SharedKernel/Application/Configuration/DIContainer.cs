@@ -1,11 +1,11 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace ZUMA.SharedKernel.Infrastructure.Configurations;
+namespace ZUMA.SharedKernel.Application.Configuration;
 
 public static class DIContainer
 {
-    public static void ConfigureBaseServices(this IServiceCollection services, IConfiguration configuration)
+    public static void ConfigureApplicationBaseServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddLogging();
         services.AddSingleton<IMessageService, MessageService>();

@@ -1,4 +1,4 @@
-﻿namespace ZUMA.SharedKernel.Domain.Entities;
+﻿namespace ZUMA.SharedKernel.Domain.Interfaces;
 
 public interface IBaseEntity
 {
