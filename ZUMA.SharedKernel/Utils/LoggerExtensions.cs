@@ -5,7 +5,7 @@ namespace ZUMA.SharedKernel.Utils;
 
 public static class LoggerExtensions
 {
-    private static readonly string? _assemblyName = Assembly.GetEntryAssembly()?.GetName().Name;
+    private static readonly AssemblyName? _assemblyName = Assembly.GetEntryAssembly()?.GetName();
 
     public static IDisposable? BeginMessageScope(
         this ILogger logger,
@@ -16,8 +16,8 @@ public static class LoggerExtensions
         var scopeProvider = new Dictionary<string, object>
         {
             ["MessageId"] = messageId,
-            ["ServiceSource"] = _assemblyName ?? "UnknownService",
-            ["TimestampUtc"] = DateTime.UtcNow
+            ["Version"] = _assemblyName?.Version?.ToString() ?? "0.0.0",
+            ["ServiceSource"] = _assemblyName?.Name ?? "Unknown",
         };
 
         if (!string.IsNullOrEmpty(correlationId))
