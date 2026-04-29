@@ -11,7 +11,7 @@ public abstract class BaseConsumer<TRequest, TSuccess, TFailed, TEntity, TMessag
     where TSuccess : class, ISuccessResponse
     where TFailed : class, IFailedResponse
     where TEntity : class, IAuditableEntities
-    where TService : IRepositoryBase<TEntity>
+    where TService : IServiceBase<TEntity>
     where TMapper : IBaseMapper<TRequest, TEntity, TMessageContract>
 {
     protected readonly ILogger Logger;
