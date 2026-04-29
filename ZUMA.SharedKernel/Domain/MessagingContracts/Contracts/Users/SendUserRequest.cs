@@ -1,10 +1,11 @@
 ﻿using ZUMA.SharedKernel.Domain.Interfaces;
+using ZUMA.SharedKernel.Domain.MessagingContracts.Base;
 
 namespace ZUMA.SharedKernel.Domain.MessagingContracts.Contracts.Users;
 
 
 #region Get User By ID
-public record SendGetUserByIdRequest : IRequestEvent
+public record SendGetUserByIdRequest : BaseRequestEvent
 {
     public Guid PublicId { get; set; }
 }
@@ -15,7 +16,7 @@ public record SendGetUserByIdSuccess : ISuccessResponse
 #endregion
 
 #region Get All Users
-public record SendGetUsersRequest : IRequestEvent
+public record SendGetUsersRequest : BaseRequestEvent
 {
 
 }
@@ -38,7 +39,7 @@ public class UserMessageModel
 #endregion
 
 #region Create User
-public record SendCreateUserRequest : IRequestEvent
+public record SendCreateUserRequest : BaseRequestEvent
 {
     public string Username { get; set; }
     public string FullName { get; set; }
@@ -51,7 +52,7 @@ public record SendCreateUserSuccess : ISuccessResponse
 #endregion
 
 #region Update User
-public record SendUpdateUserRequest : IRequestEvent
+public record SendUpdateUserRequest : BaseRequestEvent
 {
     public Guid PublicId { get; set; }
     public string Username { get; set; }
@@ -65,9 +66,8 @@ public record SendUpdateUserSuccess : ISuccessResponse
 #endregion
 
 #region Delete User
-public record SendDeleteUserRequest : IRequestEvent
+public record SendDeleteUserRequest : BaseRequestEvent
 {
-    public Guid PublicId { get; set; }
 }
 public record SendDeleteUserSuccess : ISuccessResponse
 {

@@ -1,17 +1,19 @@
 ﻿using ZUMA.SharedKernel.Domain.Interfaces;
+using ZUMA.SharedKernel.Domain.MessagingContracts.Base;
 
 namespace ZUMA.SharedKernel.Domain.MessagingContracts.Contracts.Authorization;
 
-public class SendAuthorizeUserRequest : IRequestEvent
+public record SendAuthorizeUserRequest : BaseRequestEvent
 {
     public string Email { get; set; } = null!;
+
 }
 
-public class AuthorizeUserSuccess : ISuccessResponse
+public record AuthorizeUserSuccess : ISuccessResponse
 {
     public DateTime SentAt { get; set; }
 }
 
-public class AuthorizeUserFailed : IFailedResponse
+public record AuthorizeUserFailed : IFailedResponse
 {
 }

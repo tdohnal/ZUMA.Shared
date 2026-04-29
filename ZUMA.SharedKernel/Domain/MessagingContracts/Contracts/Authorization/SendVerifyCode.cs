@@ -1,8 +1,9 @@
 ﻿using ZUMA.SharedKernel.Domain.Interfaces;
+using ZUMA.SharedKernel.Domain.MessagingContracts.Base;
 
 namespace ZUMA.SharedKernel.Domain.MessagingContracts.Contracts.Authorization;
 
-public class SendVerifyCodeRequest : IRequestEvent
+public record SendVerifyCodeRequest : BaseRequestEvent
 {
     public string Email { get; set; } = string.Empty;
     public string Code { get; set; } = string.Empty;

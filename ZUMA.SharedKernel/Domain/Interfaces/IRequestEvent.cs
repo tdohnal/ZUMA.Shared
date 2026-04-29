@@ -2,4 +2,6 @@
 
 public interface IRequestEvent
 {
+    public Guid? PublicId { get; set; }
+    public HttpMethod Method { get; set; }
 }

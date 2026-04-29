@@ -1,4 +1,5 @@
 ﻿using ZUMA.SharedKernel.Domain.Interfaces;
+using ZUMA.SharedKernel.Domain.MessagingContracts.Base;
 
 namespace ZUMA.SharedKernel.Domain.MessagingContracts.Contracts.Authorization;
 
@@ -8,7 +9,7 @@ public record SendRegistrationCreateRequest(
     string LastName,
     string Email,
     string Username
-) : IRequestEvent;
+) : BaseRequestEvent;
 
 public class RegistrateSuccess : ISuccessResponse
 {

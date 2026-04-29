@@ -1,14 +1,15 @@
 ﻿using ZUMA.SharedKernel.Domain.Enums;
 using ZUMA.SharedKernel.Domain.Interfaces;
+using ZUMA.SharedKernel.Domain.MessagingContracts.Base;
 using ZUMA.SharedKernel.Domain.ValueObjects.Customer.ControlsElement;
 
 namespace ZUMA.SharedKernel.Domain.MessagingContracts.Contracts.ControlsElement;
 
 
 #region Get ControlsElement By ID
-public record SendGetControlsElementByIdRequest : IRequestEvent
+public record SendGetControlsElementByIdRequest : BaseRequestEvent
 {
-    public Guid PublicId { get; set; }
+
 }
 public record SendGetControlsElementByIdSuccess : ISuccessResponse
 {
@@ -17,7 +18,7 @@ public record SendGetControlsElementByIdSuccess : ISuccessResponse
 #endregion
 
 #region Get All ControlsElements
-public record SendGetControlsElementsRequest : IRequestEvent
+public record SendGetControlsElementsRequest : BaseRequestEvent
 {
 
 }
@@ -61,7 +62,7 @@ public class ControlsElementsItemModel
 #endregion
 
 #region Create ControlsElement
-public record SendCreateControlsElementRequest : IRequestEvent
+public record SendCreateControlsElementRequest : BaseRequestEvent
 {
     public required string Title { get; set; }
 
@@ -79,7 +80,7 @@ public record SendCreateControlsElementSuccess : ISuccessResponse
 #endregion
 
 #region Update ControlsElement
-public record SendUpdateControlsElementRequest : IRequestEvent
+public record SendUpdateControlsElementRequest : BaseRequestEvent
 {
     #region Base
 
@@ -106,9 +107,8 @@ public record SendUpdateControlsElementSuccess : ISuccessResponse
 #endregion
 
 #region Delete ControlsElement
-public record SendDeleteControlsElementRequest : IRequestEvent
+public record SendDeleteControlsElementRequest : BaseRequestEvent
 {
-    public Guid PublicId { get; set; }
 }
 public record SendDeleteControlsElementSuccess : ISuccessResponse
 {
