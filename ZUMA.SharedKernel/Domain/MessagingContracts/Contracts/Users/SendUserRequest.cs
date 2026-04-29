@@ -7,7 +7,6 @@ namespace ZUMA.SharedKernel.Domain.MessagingContracts.Contracts.Users;
 #region Get User By ID
 public record SendGetUserByIdRequest : BaseRequestEvent
 {
-    public Guid PublicId { get; set; }
 }
 public record SendGetUserByIdSuccess : ISuccessResponse
 {
@@ -54,7 +53,6 @@ public record SendCreateUserSuccess : ISuccessResponse
 #region Update User
 public record SendUpdateUserRequest : BaseRequestEvent
 {
-    public Guid PublicId { get; set; }
     public string Username { get; set; }
     public string FullName { get; set; }
     public string Email { get; set; }
