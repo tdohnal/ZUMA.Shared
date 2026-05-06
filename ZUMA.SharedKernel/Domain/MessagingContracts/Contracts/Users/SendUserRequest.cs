@@ -7,6 +7,7 @@ namespace ZUMA.SharedKernel.Domain.MessagingContracts.Contracts.Users;
 #region Get User By ID
 public record SendGetUserByIdRequest : BaseRequestEvent
 {
+    public Guid PublicId { get; set; }
 }
 public record SendGetUserByIdSuccess : ISuccessResponse
 {
@@ -38,6 +39,7 @@ public class UserMessageModel
 #endregion
 
 #region Create User
+
 public record SendCreateUserRequest : BaseRequestEvent
 {
     public string Username { get; set; }
@@ -48,11 +50,14 @@ public record SendCreateUserSuccess : ISuccessResponse
 {
     public UserMessageModel User { get; set; }
 }
+
 #endregion
 
 #region Update User
+
 public record SendUpdateUserRequest : BaseRequestEvent
 {
+    public Guid PublicId { get; set; }
     public string Username { get; set; }
     public string FullName { get; set; }
     public string Email { get; set; }
@@ -61,23 +66,28 @@ public record SendUpdateUserSuccess : ISuccessResponse
 {
     public UserMessageModel User { get; set; }
 }
+
 #endregion
 
 #region Delete User
+
 public record SendDeleteUserRequest : BaseRequestEvent
 {
 }
 public record SendDeleteUserSuccess : ISuccessResponse
 {
 }
+
 #endregion
 
 #region Common Failed Response
+
 public record SendUserFailed : IFailedResponse
 {
     public string ErrorMessage { get; set; }
     public string ErrorCode = "INTERNAL_ERROR";
 
 }
+
 #endregion
 
