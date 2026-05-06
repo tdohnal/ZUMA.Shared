@@ -8,7 +8,7 @@ namespace ZUMA.SharedKernel.Infrastructure.Extensions;
 public static class TelemetryExtensions
 {
     public static IServiceCollection AddZumaTelemetry(this IServiceCollection services,
-        string serviceName, string otlpEndpoint)
+    string serviceName, string otlpEndpoint)
     {
         services.AddOpenTelemetry()
             .ConfigureResource(resource => resource
@@ -30,10 +30,7 @@ public static class TelemetryExtensions
                     });
             });
 
-        services.Configure<LoggerFilterOptions>(options =>
-        {
-        });
-
         return services;
     }
+
 }
