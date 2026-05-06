@@ -37,7 +37,7 @@ public abstract class BaseConsumer<TRequest> : IConsumer<TRequest>
         await context.RespondAsync<TFailedResponse>(new
         {
             ErrorMessage = $"INTERNAL_ERROR",
-            ErrorCode = "INTERNAL_ERROR"
+            ErrorCode = "500"
         });
     }
 }

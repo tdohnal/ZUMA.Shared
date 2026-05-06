@@ -73,6 +73,7 @@ public record SendUpdateUserSuccess : SuccessResponseBase
 
 public record SendDeleteUserRequest : BaseRequestEvent
 {
+    public Guid PublicId { get; set; }
 }
 public record SendDeleteUserSuccess : SuccessResponseBase
 {
