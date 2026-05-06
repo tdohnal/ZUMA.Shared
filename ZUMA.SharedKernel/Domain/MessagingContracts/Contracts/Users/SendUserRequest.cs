@@ -20,7 +20,7 @@ public record SendGetUsersRequest : BaseRequestEvent
 {
 
 }
-public record SendGetUsersSuccess : ISuccessResponse
+public record SendGetUsersSuccess : SuccessResponseBase
 {
     public List<UserMessageModel> User { get; set; }
 }
@@ -46,7 +46,7 @@ public record SendCreateUserRequest : BaseRequestEvent
     public string FullName { get; set; }
     public string Email { get; set; }
 }
-public record SendCreateUserSuccess : ISuccessResponse
+public record SendCreateUserSuccess : SuccessResponseBase
 {
     public UserMessageModel User { get; set; }
 }
@@ -62,7 +62,7 @@ public record SendUpdateUserRequest : BaseRequestEvent
     public string FullName { get; set; }
     public string Email { get; set; }
 }
-public record SendUpdateUserSuccess : ISuccessResponse
+public record SendUpdateUserSuccess : SuccessResponseBase
 {
     public UserMessageModel User { get; set; }
 }
@@ -74,7 +74,7 @@ public record SendUpdateUserSuccess : ISuccessResponse
 public record SendDeleteUserRequest : BaseRequestEvent
 {
 }
-public record SendDeleteUserSuccess : ISuccessResponse
+public record SendDeleteUserSuccess : SuccessResponseBase
 {
 }
 
@@ -82,7 +82,7 @@ public record SendDeleteUserSuccess : ISuccessResponse
 
 #region Common Failed Response
 
-public record SendUserFailed : IFailedResponse
+public record SendUserFailed : FailedResponseBase
 {
     public string ErrorMessage { get; set; }
     public string ErrorCode = "INTERNAL_ERROR";

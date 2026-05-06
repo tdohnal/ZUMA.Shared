@@ -1,27 +1,27 @@
 ﻿using ZUMA.SharedKernel.Domain.Enums;
-using ZUMA.SharedKernel.Domain.Interfaces;
+using ZUMA.SharedKernel.Domain.MessagingContracts.Base;
 using ZUMA.SharedKernel.Domain.ValueObjects.Customer.ControlsElement;
 
 namespace ZUMA.SharedKernel.Domain.MessagingContracts.Contracts.ControlsElement;
 
 
 #region Get ControlsElement By ID
-public record SendGetControlsElementByIdRequest : IRequestEvent
+public record SendGetControlsElementByIdRequest : BaseRequestEvent
 {
     public Guid PublicId { get; set; }
 }
-public record SendGetControlsElementByIdSuccess : ISuccessResponse
+public record SendGetControlsElementByIdSuccess : SuccessResponseBase
 {
     public required ControlsElementMessageModel ControlsElement { get; set; }
 }
 #endregion
 
 #region Get All ControlsElements
-public record SendGetControlsElementsRequest : IRequestEvent
+public record SendGetControlsElementsRequest : BaseRequestEvent
 {
 
 }
-public record SendGetControlsElementsSuccess : ISuccessResponse
+public record SendGetControlsElementsSuccess : SuccessResponseBase
 {
     public required List<ControlsElementMessageModel> ControlsElement { get; set; }
 }
@@ -61,7 +61,7 @@ public class ControlsElementsItemModel
 #endregion
 
 #region Create ControlsElement
-public record SendCreateControlsElementRequest : IRequestEvent
+public record SendCreateControlsElementRequest : BaseRequestEvent
 {
     public required string Title { get; set; }
 
@@ -72,14 +72,14 @@ public record SendCreateControlsElementRequest : IRequestEvent
     public List<ControlsElementsItemModel> Items { get; set; } = new();
     public ElementsPermission ElementsPermission { get; set; } = new();
 }
-public record SendCreateControlsElementSuccess : ISuccessResponse
+public record SendCreateControlsElementSuccess : SuccessResponseBase
 {
     public ControlsElementMessageModel ControlsElement { get; set; }
 }
 #endregion
 
 #region Update ControlsElement
-public record SendUpdateControlsElementRequest : IRequestEvent
+public record SendUpdateControlsElementRequest : BaseRequestEvent
 {
     #region Base
 
@@ -99,24 +99,24 @@ public record SendUpdateControlsElementRequest : IRequestEvent
     public List<ControlsElementsItemModel> Items { get; set; } = new();
     public ElementsPermission ElementsPermission { get; set; } = new();
 }
-public record SendUpdateControlsElementSuccess : ISuccessResponse
+public record SendUpdateControlsElementSuccess : SuccessResponseBase
 {
     public ControlsElementMessageModel ControlsElement { get; set; }
 }
 #endregion
 
 #region Delete ControlsElement
-public record SendDeleteControlsElementRequest : IRequestEvent
+public record SendDeleteControlsElementRequest : BaseRequestEvent
 {
     public Guid PublicId { get; set; }
 }
-public record SendDeleteControlsElementSuccess : ISuccessResponse
+public record SendDeleteControlsElementSuccess : SuccessResponseBase
 {
 }
 #endregion
 
 #region Common Failed Response
-public record SendControlsElementFailed : IFailedResponse
+public record SendControlsElementFailed : FailedResponseBase
 {
     public string ErrorMessage { get; set; }
     public string ErrorCode = "INTERNAL_ERROR";
