@@ -1,5 +1,4 @@
-﻿using ZUMA.SharedKernel.Domain.Interfaces;
-using ZUMA.SharedKernel.Domain.MessagingContracts.Base;
+﻿using ZUMA.SharedKernel.Domain.MessagingContracts.Base;
 
 namespace ZUMA.SharedKernel.Domain.MessagingContracts.Contracts.Authorization;
 
@@ -20,13 +19,13 @@ public record VerificationUserMessage
     public DateTime? Deleted { get; init; }
 }
 
-public record VerificationSuccess : ISuccessResponse
+public record VerificationSuccess : SuccessResponseBase
 {
     public VerificationUserMessage User { get; set; }
     public string Token { get; set; }
 }
 
-public class VerificationFailed : IFailedResponse
+public record VerificationFailed : FailedResponseBase
 {
 
 
