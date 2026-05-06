@@ -19,6 +19,8 @@ public abstract class BaseConsumer<TRequest> : IConsumer<TRequest>
         {
             try
             {
+                ArgumentNullException.ThrowIfNull(context);
+
                 await OnConsumeAsync(context);
             }
             catch (Exception ex)
