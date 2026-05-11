@@ -51,7 +51,7 @@ public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IA
     public virtual async Task<T?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Getting entity of type {EntityType} with ID {EntityId}", typeof(T).Name, id);
-        return await ApplyIncludes(_dbSet).SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+        return await ApplyIncludes(_dbSet).SingleOrDefaultAsync(x => x.Id == id && !x.Deleted.HasValue, cancellationToken);
     }
 
     public virtual async Task<T?> GetByPublicIdAsync(Guid publicId, CancellationToken cancellationToken = default)
