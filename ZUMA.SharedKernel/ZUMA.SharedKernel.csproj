@@ -13,8 +13,9 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<DebugType>embedded</DebugType>
-		<EmbedAllSources>true</EmbedAllSources>
+		<DebugType>full</DebugType>
+		<DebugSymbols>true</DebugSymbols>
+		<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 	</PropertyGroup>
 
 	<PropertyGroup>
