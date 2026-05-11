@@ -12,6 +12,16 @@
 		<RepositoryUrl>https://github.com/tdohnal/ZUMA.API</RepositoryUrl>
 	</PropertyGroup>
 
+	<PropertyGroup>
+		<DebugType>embedded</DebugType>
+		<EmbedAllSources>true</EmbedAllSources>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<PackageReference Include="MassTransit" Version="8.5.9" />
 		<PackageReference Include="MassTransit.EntityFrameworkCore" Version="8.5.9" />
