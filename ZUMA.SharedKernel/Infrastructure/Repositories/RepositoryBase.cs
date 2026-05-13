@@ -1,17 +1,19 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 using ZUMA.SharedKernel.Domain.Interfaces;
+using ZUMA.SharedKernel.Infrastructure.Repositories.Cache;
 
 namespace ZUMA.SharedKernel.Infrastructure.Repositories;
 
-public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IAuditableEntities
+public abstract class RepositoryBase<T> : DistributedCacheBase<T>, IRepositoryBase<T> where T : class, IAuditableEntities
 {
     protected readonly DbContext _dbContext;
     protected readonly DbSet<T> _dbSet;
-    protected readonly ILogger _logger;
+    protected readonly ILogger<RepositoryBase<T>> _logger;
 
-    public RepositoryBase(DbContext dbContext, ILogger logger)
+    public RepositoryBase(DbContext dbContext, IDistributedCache cache, ILogger<RepositoryBase<T>> logger) : base(cache, logger)
     {
         _dbContext = dbContext;
         _dbSet = _dbContext.Set<T>();
@@ -51,12 +53,34 @@ public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IA
     public virtual async Task<T?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Getting entity of type {EntityType} with ID {EntityId}", typeof(T).Name, id);
-        return await ApplyIncludes(_dbSet).SingleOrDefaultAsync(x => x.Id == id && !x.Deleted.HasValue, cancellationToken);
+
+        var cacheKey = GetCacheKey(id);
+        var cachedEntity = await GetFromCacheAsync(cacheKey, cancellationToken);
+        if (cachedEntity != null)
+        {
+            return cachedEntity;
+        }
+
+        var ret = await ApplyIncludes(_dbSet).SingleOrDefaultAsync(x => x.Id == id && !x.Deleted.HasValue, cancellationToken);
+
+        if (ret != null && IsCacheEnabled && !string.IsNullOrEmpty(cacheKey))
+        {
+            await SetInCacheAsync(cacheKey, ret, cancellationToken);
+        }
+
+        return ret;
     }
 
     public virtual async Task<T?> GetByPublicIdAsync(Guid publicId, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Getting entity of type {EntityType} with ID {EntityId}", typeof(T).Name, publicId);
+        var cacheKey = GetCacheKey(publicId);
+        var cachedEntity = await GetFromCacheAsync(cacheKey, cancellationToken);
+        if (cachedEntity != null)
+        {
+            return cachedEntity;
+        }
+
         return await ApplyIncludes(_dbSet).SingleOrDefaultAsync(x => x.PublicId == publicId && !x.Deleted.HasValue, cancellationToken);
     }
 
@@ -80,6 +104,9 @@ public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IA
         _dbSet.Attach(entity);
         _dbContext.Entry(entity).State = EntityState.Modified;
         await SaveChangesAsync(entity, cancellationToken);
+
+        await InvalidateCacheAsync(entity.Id, entity.PublicId, cancellationToken);
+
         return entity;
     }
 
@@ -94,6 +121,12 @@ public abstract class RepositoryBase<T> : IRepositoryBase<T> where T : class, IA
         _dbContext.Entry(entity).Property(x => x.Deleted).IsModified = true;
 
         var affected = await SaveChangesAsync(entity, cancellationToken);
+
+        if (affected > 0)
+        {
+            await InvalidateCacheAsync(entity.Id, entity.PublicId, cancellationToken);
+        }
+
         return affected > 0;
     }
 
