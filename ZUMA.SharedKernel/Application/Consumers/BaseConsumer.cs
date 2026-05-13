@@ -38,7 +38,7 @@ public abstract class BaseConsumer<TRequest> : IConsumer<TRequest>
         _logger.LogError(ex, "Processing failed for {RequestType}", typeof(TRequest).Name);
         await context.RespondAsync<TFailedResponse>(new
         {
-            ErrorMessage = $"INTERNAL_ERROR",
+            ErrorMessage = $"INTERNAL_ERROR: {ex.Message}",
             ErrorCode = "500"
         });
     }
